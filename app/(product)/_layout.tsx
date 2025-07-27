@@ -1,0 +1,18 @@
+import { useThemeColors } from "@/common/hooks/useThemeColors";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+
+export default function ProductLayout() {
+  const theme = useThemeColors();
+
+  return (
+    <>
+      <StatusBar style="auto" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
+    </>
+  );
+}

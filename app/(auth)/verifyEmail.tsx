@@ -1,6 +1,6 @@
+import { Colors } from "@/common/constants/colors";
 import { CustomButton } from "@/components/CustomButton";
 import TitleHeader from "@/components/TitleHeader";
-import { Colors } from "@/constants/colors";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {

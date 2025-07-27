@@ -1,4 +1,4 @@
-import { Colors } from "@/constants/colors";
+import { Colors } from "@/common/constants/colors";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
 export const CustomInput = ({

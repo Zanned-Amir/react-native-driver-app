@@ -1,4 +1,4 @@
-import { Colors } from "@/constants/colors";
+import { Colors } from "@/common/constants/colors";
 import React from "react";
 import {
   ActivityIndicator,

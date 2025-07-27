@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     position: "relative", // allows absolute positioning for back button
   },
   back: {
-    position: "absolute", // keeps it on the left regardless of title alignment
+    position: "absolute",
     left: 20,
     backgroundColor: "#89A2E6FF",
     borderRadius: 20,

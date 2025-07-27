@@ -1,7 +1,7 @@
+import { Colors } from "@/common/constants/colors";
 import { CustomButton } from "@/components/CustomButton";
 import { CustomInput } from "@/components/CustomInput";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
-import { Colors } from "@/constants/colors";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {

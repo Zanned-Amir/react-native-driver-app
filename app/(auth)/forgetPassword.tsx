@@ -1,7 +1,7 @@
+import { Colors } from "@/common/constants/colors";
 import { CustomButton } from "@/components/CustomButton";
 import { CustomInput } from "@/components/CustomInput";
 import TitleHeader from "@/components/TitleHeader";
-import { Colors } from "@/constants/colors";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";

@@ -1,5 +1,6 @@
+import { Image } from "expo-image";
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
 export function GoogleSignInButton({ onPress }) {
   return (
@@ -7,7 +8,7 @@ export function GoogleSignInButton({ onPress }) {
       <Image
         source={require("@/assets/icons/google.png")}
         style={styles.icon}
-        resizeMode="contain"
+        contentFit="contain"
       />
       <Text style={styles.text}>Sign in with Google</Text>
     </TouchableOpacity>

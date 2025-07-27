@@ -15,6 +15,20 @@ export default function Index() {
         onPress={() => router.navigate("/accountMenu")}
         title="Go to Account Menu"
       />
+
+      <Button
+        onPress={() => router.navigate("/(tabs)/maps")}
+        title="Go to Maps"
+      />
+
+      <Button onPress={() => router.navigate("/home")} title="Home" />
+
+      <Button
+        onPress={() => router.navigate("/(driver-order)/orders")}
+        title="Orders"
+      />
+
+      <Button onPress={() => router.navigate("/cart")} title="Cart" />
     </View>
   );
 }

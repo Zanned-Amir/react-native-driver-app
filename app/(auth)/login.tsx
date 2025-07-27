@@ -1,4 +1,4 @@
-import { Colors } from "@/constants/colors";
+import { Colors } from "@/common/constants/colors";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {

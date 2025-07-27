@@ -1,6 +1,6 @@
+import { Colors } from "@/common/constants/colors";
 import FormInput from "@/components/FormInput";
 import TitleHeader from "@/components/TitleHeader";
-import { Colors } from "@/constants/colors";
 import { AntDesign } from "@expo/vector-icons";
 
 import { Image } from "expo-image";

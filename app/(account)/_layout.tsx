@@ -1,4 +1,4 @@
-import { useThemeColors } from "@/hooks/useThemeColors";
+import { useThemeColors } from "@/common/hooks/useThemeColors";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
