@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,33 +9,56 @@ import {
   ViewStyle,
 } from "react-native";
 
-interface FormInputProps extends Omit<TextInputProps, "style"> {
+interface FormInputProps extends Omit<TextInputProps, "style" | "ref"> {
   label?: string;
   error?: string;
+  required?: boolean;
   style?: ViewStyle;
   inputStyle?: TextStyle;
   labelStyle?: TextStyle;
   errorStyle?: TextStyle;
+  rightIcon?: React.ReactNode; // ✅ Add rightIcon support
 }
 
-const FormInput: React.FC<FormInputProps> = ({
-  label,
-  error,
-  style,
-  inputStyle,
-  labelStyle,
-  errorStyle,
-  ...props
-}) => (
-  <View style={[styles.container, style]}>
-    {label ? <Text style={[styles.label, labelStyle]}>{label}</Text> : null}
-    <TextInput
-      style={[styles.input, inputStyle, error && styles.inputError]}
-      {...props}
-    />
-    {error ? <Text style={[styles.error, errorStyle]}>{error}</Text> : null}
-  </View>
+const FormInput = forwardRef<TextInput, FormInputProps>(
+  (
+    {
+      label,
+      error,
+      required,
+      style,
+      inputStyle,
+      labelStyle,
+      errorStyle,
+      rightIcon,
+      ...props
+    },
+    ref
+  ) => (
+    <View style={[styles.container, style]}>
+      {label && (
+        <Text style={[styles.label, labelStyle]}>
+          {label}
+          {required && <Text style={{ color: "#ff5555" }}> *</Text>}
+        </Text>
+      )}
+      <View style={[styles.inputWrapper, error && styles.inputError]}>
+        <TextInput
+          ref={ref}
+          style={[styles.input, inputStyle]}
+          placeholderTextColor="#999"
+          {...props}
+        />
+        {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+      </View>
+      {error && <Text style={[styles.error, errorStyle]}>{error}</Text>}
+    </View>
+  )
 );
+
+FormInput.displayName = "FormInput";
+
+export default FormInput;
 
 const styles = StyleSheet.create({
   container: {
@@ -48,13 +71,20 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "500",
   },
-  input: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#eee",
     borderRadius: 10,
-    padding: 14,
-    fontSize: 15,
     backgroundColor: "#fafafa",
+    paddingHorizontal: 14,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: "#000", // ✅ Ensure text isn't white
   },
   inputError: {
     borderColor: "#ff5555",
@@ -64,6 +94,7 @@ const styles = StyleSheet.create({
     color: "#ff5555",
     fontSize: 12,
   },
+  rightIcon: {
+    marginLeft: 8,
+  },
 });
-
-export default FormInput;

@@ -5,6 +5,10 @@ const envSchema = z.object({
   ENV: z.enum(["development", "production"]).default("development"),
 });
 
+export const env = {
+  API_BASE_URL: "http://192.168.1.13:3000/api",
+  ENV: "development",
+};
 declare global {
   namespace NodeJS {
     interface ProcessEnv extends z.infer<typeof envSchema> {}

@@ -1,12 +1,16 @@
 import { Colors } from "@/common/constants/colors";
 import FormInput from "@/components/FormInput";
 import TitleHeader from "@/components/TitleHeader";
-import { AntDesign } from "@expo/vector-icons";
+import { useProfile, useProfileAvatar } from "@/features/auth/hooks";
 
+import { AntDesign } from "@expo/vector-icons";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,41 +18,87 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import z from "zod";
+
+const profileSchema = z.object({
+  full_name: z.string().min(2, "Full name is required"),
+  email: z.email("Invalid email"),
+  role_name: z.string().min(1, "Role name is required"),
+  phone_number: z
+    .string()
+    .regex(/^\+?[0-9]{8}$/, "Phone number must be exactly 8 digits long"),
+  address_line_1: z.string().optional(),
+  address_line_2: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const ProfilePage = () => {
-  const PlaceHolderImage = require("../../assets/images/avatar.png");
   const router = useRouter();
+  const PlaceHolderImage = require("../../assets/images/avatar.png");
 
-  // Store initial data in a ref so it doesn't change on re-render
-  const initialData = useRef({
-    firstName: "John",
-    lastName: "Doe",
-    email: "johndoe@gmail.com",
-    mobile: "+91-123456789",
+  const { data: profile, isLoading } = useProfile();
+  const { data: profileAvatar, isLoading: isAvatarLoading } =
+    useProfileAvatar();
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isDirty },
+    reset,
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      full_name: "",
+      email: "",
+      role_name: "",
+      phone_number: "",
+      address_line_1: "",
+      address_line_2: "",
+    },
   });
+
+  useEffect(() => {
+    if (profile) {
+      reset({
+        full_name: profile.full_name,
+        email: profile.email,
+        role_name: profile.role_name,
+        phone_number: profile.phone_number,
+        address_line_1: profile.address_line_1,
+        address_line_2: profile.address_line_2,
+      });
+    }
+  }, [profile, reset]);
 
   const handleBackPress = () => {
     router.back();
-    console.log("Back button pressed");
   };
 
-  // State for current input values
-  const [firstName, setFirstName] = useState(initialData.current.firstName);
-  const [lastName, setLastName] = useState(initialData.current.lastName);
-  const [email, setEmail] = useState(initialData.current.email);
-  const [mobile, setMobile] = useState(initialData.current.mobile);
+  const onSubmit = (data: ProfileFormValues) => {
+    console.log("Submit:", data);
+    // call your update API here
+  };
 
-  // Compare current state to initial values
-  const isSameInput =
-    firstName === initialData.current.firstName &&
-    lastName === initialData.current.lastName &&
-    email === initialData.current.email &&
-    mobile === initialData.current.mobile;
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <TitleHeader
+          title="Profile"
+          showBackButton={true}
+          onBackPress={handleBackPress}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.secondary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <TitleHeader
-        title="Menu"
+        title="Profile"
         showBackButton={true}
         onBackPress={handleBackPress}
       />
@@ -56,7 +106,10 @@ const ProfilePage = () => {
         <View style={styles.container}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
-            <Image source={PlaceHolderImage} style={styles.avatar} />
+            <Image
+              source={profileAvatar || PlaceHolderImage}
+              style={styles.avatar}
+            />
             <TouchableOpacity style={styles.cameraIcon}>
               <AntDesign name="camerao" size={20} color="#5B4FE9" />
             </TouchableOpacity>
@@ -64,47 +117,115 @@ const ProfilePage = () => {
 
           {/* Form Fields */}
           <View style={styles.form}>
-            <View style={styles.form}>
-              <FormInput
-                label="First Name"
-                placeholder="First Name"
-                value={firstName}
-                onChangeText={setFirstName}
-                inputStyle={styles.input}
-              />
-              <FormInput
-                label="Last Name"
-                placeholder="Last Name"
-                value={lastName}
-                onChangeText={setLastName}
-                inputStyle={styles.input}
-              />
-              <FormInput
-                label="E-Mail"
-                placeholder="E-Mail"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-                inputStyle={styles.input}
-              />
-              <FormInput
-                label="Mobile"
-                placeholder="Mobile"
-                keyboardType="phone-pad"
-                value={mobile}
-                onChangeText={setMobile}
-                inputStyle={styles.input}
-              />
-            </View>
+            <Controller
+              name="role_name"
+              control={control}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <FormInput
+                  label="Role"
+                  placeholder="Role"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={errors.role_name?.message}
+                  editable={false}
+                />
+              )}
+            />
+
+            <Controller
+              name="email"
+              control={control}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <FormInput
+                  label="Email"
+                  placeholder="Email"
+                  keyboardType="email-address"
+                  value={value}
+                  editable={false}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={errors.email?.message}
+                />
+              )}
+            />
+
+            <Controller
+              name="full_name"
+              control={control}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <FormInput
+                  label="Full Name"
+                  placeholder="Full Name"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={errors.full_name?.message}
+                />
+              )}
+            />
+            <Controller
+              name="phone_number"
+              control={control}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <FormInput
+                  label="Phone"
+                  placeholder="Phone"
+                  keyboardType="phone-pad"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  editable={false}
+                  error={errors.phone_number?.message}
+                />
+              )}
+            />
+
+            <Controller
+              name="address_line_1"
+              control={control}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <FormInput
+                  label="Address Line 1"
+                  placeholder="Address Line 1"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  editable={false}
+                  error={errors.address_line_1?.message}
+                />
+              )}
+            />
+            <Controller
+              name="address_line_2"
+              control={control}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <FormInput
+                  label="Address Line 2"
+                  placeholder="Address Line 2"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  editable={false}
+                  error={errors.address_line_2?.message}
+                />
+              )}
+            />
           </View>
 
-          {/* Save Button */}
+          {/* Save Button 
+          // hide the save button  for now as the update functionality is not implemented yet
+          */}
           <TouchableOpacity
             style={[
               styles.saveButton,
-              isSameInput && { backgroundColor: Colors.secondaryTransparent },
+              !isDirty && {
+                backgroundColor: Colors.secondaryTransparent,
+                display: "none",
+              },
             ]}
-            disabled={isSameInput}
+            disabled={!isDirty}
+            onPress={handleSubmit(onSubmit)}
           >
             <Text style={styles.saveButtonText}>SAVE</Text>
           </TouchableOpacity>
@@ -183,5 +304,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     letterSpacing: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
 });

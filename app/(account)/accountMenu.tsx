@@ -1,9 +1,13 @@
 import FormInput from "@/components/FormInput";
 import TitleHeader from "@/components/TitleHeader";
+import { useLogout } from "@/features/auth/hooks";
 import { Entypo, Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
+  ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
@@ -15,7 +19,10 @@ import {
   ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors } from "react-native/Libraries/NewAppScreen";
+
+import { Colors } from "@/common/constants/colors";
+import z from "zod";
+import { useChangePassword } from "../../features/auth/hooks";
 
 const AccountMenu = () => {
   const router = useRouter();
@@ -23,6 +30,8 @@ const AccountMenu = () => {
   const handleBackPress = () => {
     router.back();
   };
+
+  const logoutMutation = useLogout();
 
   const handleEditProfilePress = () => {
     router.push("/(account)/profile");
@@ -34,9 +43,9 @@ const AccountMenu = () => {
     console.log("Notification Pressed");
   };
 
-  const handleLogoutPress = () => {
-    router.navigate("/(auth)/login");
-    console.log("Log Out Pressed");
+  const handleLogoutPress = async () => {
+    await logoutMutation.mutateAsync();
+    router.replace("/(auth)/login");
   };
 
   const handleSettingsPress = () => {
@@ -134,9 +143,73 @@ const MenuItem = ({
   </TouchableHighlight>
 );
 
-const ChangePasswordModal = ({ visible, onClose }) => {
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+const changePasswordSchema = z
+  .object({
+    oldPassword: z.string().min(8, "Old password is required"),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/g, {
+        message:
+          "Password must contain at least one uppercase letter A-Z \n one lowercase letter a-z \n one number 0-9 \n and one special character !@#$%^&*",
+      })
+      .max(32, "Password too long"),
+    confirmPassword: z.string(),
+    logout: z.boolean().optional(), // <-- Add this
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+const ChangePasswordModal = ({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) => {
+  const useChangePasswordMutation = useChangePassword();
+  const useLogoutMutation = useLogout();
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<ChangePasswordInput>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      oldPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+      logout: false,
+    },
+  });
+
+  // ✅ Correct place to define these states
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const onSubmit = async (data: ChangePasswordInput) => {
+    const { oldPassword, newPassword, logout = false } = data;
+
+    await useChangePasswordMutation.mutateAsync({
+      oldPassword,
+      newPassword,
+    });
+
+    if (logout) {
+      await useLogoutMutation.mutateAsync();
+      console.log("User logged out after password change");
+    }
+
+    reset();
+    onClose();
+  };
 
   return (
     <Modal
@@ -150,22 +223,126 @@ const ChangePasswordModal = ({ visible, onClose }) => {
           <TouchableWithoutFeedback>
             <View style={styles.modalContainer}>
               <Text style={styles.title}>Change Password</Text>
-              <FormInput
-                label="New Password"
-                placeholder="New Password"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
+
+              {/* Old Password */}
+              <Controller
+                control={control}
+                name="oldPassword"
+                render={({ field: { onChange, value } }) => (
+                  <FormInput
+                    label="Old Password"
+                    placeholder="Old Password"
+                    value={value}
+                    onChangeText={onChange}
+                    error={errors.oldPassword?.message}
+                    secureTextEntry={!showOldPassword}
+                    rightIcon={
+                      <TouchableOpacity
+                        onPress={() => setShowOldPassword(!showOldPassword)}
+                      >
+                        <Ionicons
+                          name={showOldPassword ? "eye-off" : "eye"}
+                          size={20}
+                          color="#999"
+                        />
+                      </TouchableOpacity>
+                    }
+                  />
+                )}
               />
-              <FormInput
-                label="Confirm Password"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
+
+              {/* New Password */}
+              <Controller
+                control={control}
+                name="newPassword"
+                render={({ field: { onChange, value } }) => (
+                  <FormInput
+                    label="New Password"
+                    placeholder="New Password"
+                    value={value}
+                    onChangeText={onChange}
+                    error={errors.newPassword?.message}
+                    secureTextEntry={!showNewPassword}
+                    rightIcon={
+                      <TouchableOpacity
+                        onPress={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        <Ionicons
+                          name={showNewPassword ? "eye-off" : "eye"}
+                          size={20}
+                          color="#999"
+                        />
+                      </TouchableOpacity>
+                    }
+                  />
+                )}
               />
-              <TouchableOpacity style={styles.saveButton} onPress={onClose}>
-                <Text style={styles.saveButtonText}>SAVE</Text>
+
+              {/* Confirm Password */}
+              <Controller
+                control={control}
+                name="confirmPassword"
+                render={({ field: { onChange, value } }) => (
+                  <FormInput
+                    label="Confirm Password"
+                    placeholder="Confirm Password"
+                    value={value}
+                    onChangeText={onChange}
+                    error={errors.confirmPassword?.message}
+                    secureTextEntry={!showConfirmPassword}
+                    rightIcon={
+                      <TouchableOpacity
+                        onPress={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                      >
+                        <Ionicons
+                          name={showConfirmPassword ? "eye-off" : "eye"}
+                          size={20}
+                          color="#999"
+                        />
+                      </TouchableOpacity>
+                    }
+                  />
+                )}
+              />
+
+              {/* Logout toggle */}
+              <Controller
+                control={control}
+                name="logout"
+                render={({ field: { onChange, value } }) => (
+                  <TouchableOpacity
+                    onPress={() => onChange(!value)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 12,
+                    }}
+                  >
+                    <Ionicons
+                      name={value ? "checkbox" : "square-outline"}
+                      size={24}
+                      color="#222"
+                    />
+                    <Text style={{ marginLeft: 8 }}>
+                      Log out from all devices
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+
+              {/* Submit button */}
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSubmit(onSubmit)}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color={Colors.primary} />
+                ) : (
+                  <Text style={styles.saveButtonText}>SAVE</Text>
+                )}
               </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
@@ -226,7 +403,7 @@ const styles = StyleSheet.create({
 
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: "rgba(0,0,0,0)",
     justifyContent: "flex-end",
   },
   modalContainer: {

@@ -1,3 +1,4 @@
+import { HealthCheckApi } from "@/common/api/AppApi";
 import { ProductProps } from "@/common/types";
 import DealCarousel from "@/components/CDealCarousel";
 import CustomModal from "@/components/CustomModal";
@@ -8,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -81,6 +82,20 @@ const HomePage = () => {
       images: ["test1.png", "test2.png"],
     },
   ];
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const r = await HealthCheckApi();
+        console.log("Health Check Response:", r);
+      } catch (error) {
+        console.error("Health Check Error:", error);
+      }
+    };
+    fetchData();
+
+    console.log("HomePage mounted");
+  }, []);
 
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
 

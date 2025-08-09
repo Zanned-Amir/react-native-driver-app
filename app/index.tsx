@@ -1,8 +1,12 @@
+import { useAuthStore } from "@/features/auth/store";
 import { useRouter } from "expo-router";
-import { Button, View } from "react-native";
+import { Button, Text, View } from "react-native";
 
 export default function Index() {
   const router = useRouter();
+
+  const isLoggedIn = useAuthStore((state) => state.isAuthenticated);
+
   return (
     <View className="flex-1 items-center justify-center bg-white flex-col gap-4">
       <Button onPress={() => router.navigate("/login")} title="Go to Login" />
@@ -29,6 +33,8 @@ export default function Index() {
       />
 
       <Button onPress={() => router.navigate("/cart")} title="Cart" />
+
+      <Text>{isLoggedIn ? "Logged in" : "Logged out"}</Text>
     </View>
   );
 }

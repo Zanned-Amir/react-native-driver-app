@@ -2,168 +2,120 @@ import { Colors } from "@/common/constants/colors";
 import { CustomButton } from "@/components/CustomButton";
 import { CustomInput } from "@/components/CustomInput";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
 import {
-  Animated,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
+import z from "zod";
 
-//NB: register page disabled for now
+const signupSchema = z
+  .object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    email: z.string().email("Invalid email"),
+    password: z.string().min(6, "Password must be ≥ 6 characters"),
+    confirm: z.string(),
+  })
+  .refine((data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "Passwords do not match",
+  });
+
+export type SignupFormData = z.infer<typeof signupSchema>;
+
 export default function SignupPage() {
   const router = useRouter();
+  const [showPwd, setShowPwd] = useState(false);
 
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirm: "",
-    acceptTOS: false,
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirm: "",
+    },
   });
-  const [errors, setErrors] = useState<any>({});
-  const [showPwd, setShowPwd] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const shakeAnim = useRef(new Animated.Value(0)).current;
-  const kbOffset = useRef(new Animated.Value(0)).current;
-
-  const emailIsValid = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-
-  const triggerShake = () => {
-    Animated.sequence([
-      Animated.timing(shakeAnim, {
-        toValue: 10,
-        duration: 60,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: -10,
-        duration: 60,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 0,
-        duration: 60,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const onChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => ({ ...prev, [field]: false }));
-  };
-
-  const handleSignup = () => {
-    const newErr: any = {};
-    if (!form.firstName.trim()) newErr.firstName = true;
-    if (!form.lastName.trim()) newErr.lastName = true;
-    if (!emailIsValid(form.email)) newErr.email = true;
-    if (form.password.length < 6) newErr.password = true;
-    if (form.password !== form.confirm) newErr.confirm = true;
-    if (!form.acceptTOS) newErr.acceptTOS = true;
-
-    setErrors(newErr);
-    if (Object.keys(newErr).length) {
-      triggerShake();
-      return;
+  const onSubmit = async (data: SignupFormData) => {
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500)); // fake API
+      console.log("Signup Data", data);
+      router.replace("/login");
+    } catch (err) {
+      console.error("Signup failed", err);
     }
-
-    setLoading(true);
-    // TODO: call signup API
-    setTimeout(() => setLoading(false), 2000);
   };
-
-  const handleSignIn = () => {
-    router.navigate("/login");
-  };
-
-  const handleGoogleSignIn = () => {};
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <GoogleSignInButton onPress={handleGoogleSignIn} />
-
+        <GoogleSignInButton onPress={() => {}} />
         <Text style={styles.or}>or create account with</Text>
 
-        {/* ---- Form fields ---- */}
         <CustomInput
+          name="firstName"
+          control={control}
           label="First Name"
-          value={form.firstName}
-          onChangeText={(v) => onChange("firstName", v)}
           placeholder="Becca"
-          error={errors.firstName}
-          errorMessage="Required"
         />
         <CustomInput
+          name="lastName"
+          control={control}
           label="Last Name"
-          value={form.lastName}
-          onChangeText={(v) => onChange("lastName", v)}
           placeholder="Ade"
-          error={errors.lastName}
-          errorMessage="Required"
         />
         <CustomInput
+          name="email"
+          control={control}
           label="Email Address"
-          value={form.email}
-          onChangeText={(v) => onChange("email", v)}
           placeholder="becca@example.com"
           keyboardType="email-address"
           autoCapitalize="none"
-          error={errors.email}
-          errorMessage="Enter a valid email"
         />
         <CustomInput
+          name="password"
+          control={control}
           label="Password"
-          value={form.password}
-          onChangeText={(v) => onChange("password", v)}
           placeholder="••••••••"
           secureTextEntry={!showPwd}
-          rightIcon={showPwd ? "eye-off" : "eye"}
-          onRightIconPress={() => setShowPwd(!showPwd)}
-          error={errors.password}
-          errorMessage="≥ 6 characters"
         />
         <CustomInput
+          name="confirm"
+          control={control}
           label="Confirm Password"
-          value={form.confirm}
-          onChangeText={(v) => onChange("confirm", v)}
           placeholder="Re-enter password"
           secureTextEntry={!showPwd}
-          rightIcon={showPwd ? "eye-off" : "eye"}
-          onRightIconPress={() => setShowPwd(!showPwd)}
-          error={errors.confirm}
-          errorMessage="Passwords do not match"
         />
 
-        {/* ---- Submit ---- */}
         <CustomButton
           title="Signup"
-          onPress={handleSignup}
-          loading={loading}
-          disabled={loading}
+          onPress={handleSubmit(onSubmit)}
+          loading={isSubmitting}
+          disabled={isSubmitting}
         />
 
-        {/* ---- Link to Login ---- */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Have an account? </Text>
-          <TouchableOpacity onPress={handleSignIn}>
+          <TouchableOpacity onPress={() => router.navigate("/login")}>
             <Text style={styles.link}>Sign in here</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* ---- Terms of Service ---- */}
     </SafeAreaView>
   );
 }

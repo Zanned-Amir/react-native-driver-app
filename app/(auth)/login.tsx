@@ -1,8 +1,12 @@
 import { Colors } from "@/common/constants/colors";
+import { CustomInput } from "@/components/CustomInput";
+import { useLogin, useSendVerificationEmailOtp } from "@/features/auth/hooks";
+import { useAuthStore } from "@/features/auth/store";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { useForm } from "react-hook-form";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,74 +14,70 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
+import { z } from "zod";
 import { CustomButton } from "../../components/CustomButton";
-import { CustomInput } from "../../components/CustomInput";
 import { GoogleSignInButton } from "../../components/GoogleSignInButton";
+
+const loginSchema = z.object({
+  email: z.email("Invalid email").min(1, "Email is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const isVerified = useAuthStore((state) => state.isVerified);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const handleLogin = async () => {
-    // Reset errors
-    setEmailError("");
-    setPasswordError("");
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+  const loginMutation = useLogin();
+  const sendEmailVerificationMutation = useSendVerificationEmailOtp();
+  const onSubmit = async (data: LoginFormValues) => {
+    const res = await loginMutation.mutateAsync(data);
+    if (res.email_verified) {
+      router.replace("/(tabs)/home");
+      Toast.show({
+        type: "success",
+        text1: "Login Successful",
+        text2: "Welcome back!",
+      });
+    } else if (!res.email_verified) {
+      console.log("User needs to verify email");
+      await sendEmailVerificationMutation.mutateAsync({
+        email: data.email,
+      });
 
-    // Validation
-    if (!email) {
-      setEmailError("Email is required");
-      return;
-    }
-    if (!validateEmail(email)) {
-      setEmailError("Please enter a valid email");
-      return;
-    }
-    if (!password) {
-      setPasswordError("Password is required");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Add your login logic here
-      console.log("Login attempt:", { email, password, keepSignedIn });
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Navigate to main app or handle success
-      Alert.alert("Success", "Login successful!");
-    } catch (error) {
-      Alert.alert("Error", "Login failed. Please try again.");
-    } finally {
-      setLoading(false);
+      router.push({
+        pathname: "/(auth)/OtpVerify",
+        params: { email: data.email, type: "emailVerification" },
+      });
     }
   };
 
   const handleGoogleSignIn = () => {
-    // Add Google Sign-In logic here
     console.log("Google Sign-In pressed");
   };
 
   const handleForgotPassword = () => {
-    // Navigate to forgot password screen
-    console.log("Forgot password pressed");
     router.navigate("/forgetPassword");
   };
 
   const handleSignUp = () => {
-    // Navigate to sign up screen
     router.navigate("/register");
   };
 
@@ -85,36 +85,44 @@ const LoginPage = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Login</Text>
-        <GoogleSignInButton onPress={handleGoogleSignIn} />
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or sign in with</Text>
-          <View style={styles.dividerLine} />
+        {/* Placeholder for Google Sign-In button if needed */
+        /* TODO : Implement Google Sign-In */}
+        <View style={{ display: "none" }}>
+          <GoogleSignInButton onPress={handleGoogleSignIn} />
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or sign in with</Text>
+            <View style={styles.dividerLine} />
+          </View>
         </View>
+
         <CustomInput
+          name="email"
+          control={control}
           label="Email Address"
           placeholder="Enter your email"
-          value={email}
-          onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          error={emailError}
         />
+
         <CustomInput
+          name="password"
+          control={control}
           label="Password"
           placeholder="Enter your password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          error={passwordError}
+          isPassword={true}
         />
+
         <TouchableOpacity
           onPress={handleForgotPassword}
           style={styles.forgotPassword}
         >
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
-        <View style={styles.checkboxContainer}>
+        {/* Keep me signed in checkbox 
+    TODO: Implement functionality if needed */}
+
+        <View style={[styles.checkboxContainer, { display: "none" }]}>
           <TouchableOpacity
             style={styles.checkbox}
             onPress={() => setKeepSignedIn(!keepSignedIn)}
@@ -130,16 +138,16 @@ const LoginPage = () => {
             <Text style={styles.checkboxLabel}>Keep me signed in</Text>
           </TouchableOpacity>
         </View>
+
         <CustomButton
           title="Login"
-          onPress={handleLogin}
-          loading={loading}
-          disabled={loading}
+          onPress={handleSubmit(onSubmit)}
+          loading={isSubmitting}
+          disabled={isSubmitting}
         />
-        <View style={styles.signUpContainer}></View>
 
         <View style={[styles.signUpContainer, { display: "none" }]}>
-          <Text style={styles.signUpText}> Don't have an Account? </Text>
+          <Text style={styles.signUpText}>Don't have an Account? </Text>
           <TouchableOpacity onPress={handleSignUp}>
             <Text style={styles.signUpLink}>Sign up here</Text>
           </TouchableOpacity>

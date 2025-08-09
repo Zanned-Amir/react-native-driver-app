@@ -2,55 +2,43 @@ import { Colors } from "@/common/constants/colors";
 import { CustomButton } from "@/components/CustomButton";
 import { CustomInput } from "@/components/CustomInput";
 import TitleHeader from "@/components/TitleHeader";
+import { useForgotPassword } from "@/features/auth/hooks";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { StyleSheet, View } from "react-native";
+import { z } from "zod";
+
+// Schema
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
 
 const ForgotPasswordPage = () => {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [emailError, setEmailError] = useState("");
   const router = useRouter();
+  const forgetPasswordMutation = useForgotPassword();
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<ForgotPasswordForm>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
 
-  const handleSubmit = async () => {
-    setEmailError("");
+  const onSubmit = async (data: ForgotPasswordForm) => {
+    const { data: forgetData } = await forgetPasswordMutation.mutateAsync(data);
 
-    if (!email.trim()) {
-      setEmailError("Email address is required");
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setEmailError("Please enter a valid email address");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Replace with your actual password reset API call
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulated API call
-
-      Alert.alert(
-        "Success",
-        "We've sent a link to reset your password to your email address.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.back(), // Navigate back after success
-          },
-        ]
-      );
-    } catch (error) {
-      Alert.alert("Error", "Failed to send reset email. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    router.navigate({
+      pathname: "/(auth)/OtpVerify",
+      params: { email: data.email, type: "resetPassword" },
+    });
   };
 
   const handleBackPress = () => {
@@ -58,7 +46,7 @@ const ForgotPasswordPage = () => {
   };
 
   const handleLoginPress = () => {
-    router.navigate("/login"); // Adjust route name as needed
+    router.navigate("/login");
   };
 
   return (
@@ -72,21 +60,20 @@ const ForgotPasswordPage = () => {
         <View style={styles.content}>
           <View style={styles.form}>
             <CustomInput
+              name="email"
+              control={control}
               label="Email Address"
               placeholder="thebhol@gmail.com"
-              value={email}
-              onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              error={emailError}
             />
 
             <CustomButton
               title="Submit"
-              onPress={handleSubmit}
+              onPress={handleSubmit(onSubmit)}
               variant="primary"
-              loading={loading}
-              disabled={!email.trim()}
+              loading={isSubmitting}
+              disabled={isSubmitting}
             />
           </View>
 
@@ -115,7 +102,6 @@ const styles = StyleSheet.create({
   },
   content: {
     width: "100%",
-
     justifyContent: "center",
   },
   form: {
